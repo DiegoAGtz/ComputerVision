@@ -1,7 +1,9 @@
+#include <fstream>
 #include <iostream>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+#include <string>
 
 using namespace std;
 using namespace cv;
@@ -12,12 +14,23 @@ int getCircularMask(const Mat &src, Mat &dst, Point center, int radius);
 int rotate(const Mat &src, Mat &dst, Point2f center, double angle,
            double scale);
 
+int readFromCSV(const string filename, Mat &dst);
+int drawBoard(const Mat &src, Mat &dst);
+int drawRectangle(Mat &src, int topLeftR, int topLeftC, int bottomRightR,
+                  int bottomRightC, int color);
+
 int main(int argc, char *argv[]) {
   init();
   return 0;
 }
 
 int init(void) {
+  Mat board, game;
+  readFromCSV("tableroInicial.csv", game);
+  drawBoard(game, board);
+  imshow("Tablero", board);
+
+  // ------------------------------------------------
   Mat input = imread("./cvImages/mapa.jpg", IMREAD_COLOR);
   if (!input.data) {
     cout << "Ruta de imagen incorrecta" << endl;
@@ -99,7 +112,6 @@ int getCircularMask(const Mat &src, Mat &dst, Point center, int radius) {
     cout << "getCircularMask(): La imagen de destino no esta vacia." << endl;
     return -1;
   }
-  // dst = Mat::zeros(src.rows, src.cols, src.type());
   dst = Mat::zeros(src.rows, src.cols, CV_8UC1);
   circle(dst, center, radius, 255, -1, LINE_8, 0);
   return 0;
@@ -109,5 +121,84 @@ int rotate(const Mat &src, Mat &dst, Point2f center, double angle,
            double scale) {
   Mat rotation_matrix = getRotationMatrix2D(center, angle, scale);
   warpAffine(src, dst, rotation_matrix, src.size());
+  return 0;
+}
+
+// Conway's game functions
+int readFromCSV(const string filename, Mat &dst) {
+  unsigned char data[50][100];
+  string line, token;
+  fstream file(filename, ios::in);
+  if (!file.is_open()) {
+    cout << "No se pudo abrir el fichero" << endl;
+    return -1;
+  }
+  for (int i = 0; i < 50; i++) {
+    getline(file, line);
+    stringstream ss(line);
+    for (int j = 0; j < 100; j++) {
+      getline(ss, token, ',');
+      data[i][j] = token.at(0) - 48;
+    }
+  }
+
+  file.close();
+  dst = Mat::zeros(50, 100, CV_8UC1);
+  for (int r = 0; r < dst.rows; r++) {
+    uchar *pAtDst = dst.ptr<uchar>(r);
+    for (int c = 0; c < dst.cols; c++)
+      pAtDst[c] = data[r][c];
+  }
+  return 0;
+}
+
+int drawBoard(const Mat &src, Mat &dst) {
+  if (!dst.empty()) {
+    cout << "\nsyImChessBoard(): Input must be an empty image." << endl;
+    return -1;
+  }
+
+  int deltaC = 10;
+  int deltaR = 10;
+
+  dst = Mat::zeros(src.rows * deltaR, src.cols * deltaC, src.type());
+  drawRectangle(dst, 0, 0, dst.rows, dst.cols, 0);
+
+  for (int r = 0; r < src.rows; r++) {
+    uchar *pAtSrc = (uchar *)src.ptr<uchar>(r);
+    for (int c = 0; c < src.cols; c++) {
+      if (pAtSrc[c]) {
+        drawRectangle(dst, r * deltaR, c * deltaC, (r + 1) * deltaR,
+                      (c + 1) * deltaC, 255);
+      }
+    }
+  }
+  return 0;
+}
+
+int drawRectangle(Mat &src, int topLeftR, int topLeftC, int bottomRightR,
+                  int bottomRightC, int color) {
+
+  if (src.empty()) {
+    cout << "There is no image" << endl;
+    return -1;
+  }
+
+  if (topLeftC < 0)
+    topLeftC = 0;
+  if (bottomRightC > src.cols)
+    bottomRightC = src.cols;
+  if (topLeftR < 0)
+    topLeftR = 0;
+  if (bottomRightR > src.rows)
+    bottomRightR = src.rows;
+  if (topLeftC > bottomRightC || topLeftR > bottomRightR) {
+    cout << " Incorrect set of coordinates" << endl;
+    return -1;
+  }
+
+  rectangle(src, Point(topLeftC, topLeftR), Point(bottomRightC, bottomRightR),
+            color, -1, LINE_8);
+
   return 0;
 }
