@@ -28,20 +28,36 @@ int main(int argc, char *argv[]) {
 }
 
 int init(void) {
+  string boardname;
+  cout << "Ingrese el mapa inicial, debe ser un archivo CSV de 50 renglones "
+          "por 100 columnas: ";
+  cin >> boardname;
+
+  int countGeneration = 0;
   Mat board, game;
-  readFromCSV("tableroInicial.csv", game);
-  for (int i = 0; i < 11; i++) {
+  readFromCSV(boardname, game);
+
+  while (true) {
     drawBoard(game, board);
-    imshow("Tablero", board);
+    imshow("Board", board);
     nextGeneration(game);
     board.release();
-    waitKey(1000);
+    countGeneration++;
+    cout << "Generacion #" << countGeneration
+         << ". Presiona cualquier tecla para detener el juego" << endl;
+    if (waitKey(250) >= 0)
+      break;
   }
+
+  cout << "Pasaron " << countGeneration << " generaciones" << endl;
+  cout << "\nAhora una animacion." << endl;
+  cout << "\nPuedes pulsar cualquier tecla para detenerla y salir del programa."
+       << endl;
 
   // ------------------------------------------------
   Mat input = imread("./cvImages/mapa.jpg", IMREAD_COLOR);
   if (!input.data) {
-    cout << "Ruta de imagen incorrecta" << endl;
+    cout << "Wrong or non existent filename" << endl;
     return -1;
   }
   imshow("Input", input);
@@ -71,7 +87,7 @@ int init(void) {
     rotate(dst, rotated, (Point2f)center, angle, scale);
     imshow("Masked in a Circle", rotated);
 
-    if (waitKey(10) >= 0)
+    if (waitKey(5) >= 0)
       break;
   }
 
@@ -80,19 +96,19 @@ int init(void) {
 
 int drawMask(const Mat &src, const Mat &msk, Mat &dst, int radius) {
   if (!src.data || src.channels() != 3 || src.type() != CV_8UC3) {
-    cout << "drawMask(): invalid src image.";
+    cout << "Invalid src image.";
     return -1;
   }
   if (!msk.data || msk.channels() != 1 || msk.type() != CV_8UC1) {
-    cout << "drawMask(): invalid msk image.";
+    cout << "Invalid msk image.";
     return -1;
   }
   if (dst.data) {
-    cout << "drawMask(): dst image is not empty.";
+    cout << "dst image is not empty.";
     return -1;
   }
   if (src.rows != msk.rows || src.cols != msk.cols) {
-    cout << "drawMask(): src and msk images must be the same size.";
+    cout << "src and msk images must be the same size.";
     return -1;
   }
 
@@ -113,11 +129,11 @@ int drawMask(const Mat &src, const Mat &msk, Mat &dst, int radius) {
 
 int getCircularMask(const Mat &src, Mat &dst, Point center, int radius) {
   if (!src.data) {
-    cout << "getCircularMask(): La imagen de entrada no es valida." << endl;
+    cout << "The source image is not valid." << endl;
     return -1;
   }
   if (dst.data) {
-    cout << "getCircularMask(): La imagen de destino no esta vacia." << endl;
+    cout << "The target image is not empty." << endl;
     return -1;
   }
   dst = Mat::zeros(src.rows, src.cols, CV_8UC1);
@@ -138,7 +154,7 @@ int readFromCSV(const string filename, Mat &dst) {
   string line, token;
   fstream file(filename, ios::in);
   if (!file.is_open()) {
-    cout << "No se pudo abrir el fichero" << endl;
+    cout << "Could not open the file." << endl;
     return -1;
   }
   for (int i = 0; i < 50; i++) {
@@ -162,7 +178,7 @@ int readFromCSV(const string filename, Mat &dst) {
 
 int drawBoard(const Mat &src, Mat &dst) {
   if (!dst.empty()) {
-    cout << "\nsyImChessBoard(): Input must be an empty image." << endl;
+    cout << "Input must be an empty image." << endl;
     return -1;
   }
 
@@ -231,7 +247,7 @@ int checkNeighborhood(int row, int col, const Mat &src) {
   if (row < src.rows - 1 && col < src.cols - 1 && pAtSrcAfter[col + 1])
     counter++;
 
-  // Check edge
+  // Check edges
   if (row > 0 && pAtSrcBefore[col])
     counter++;
   if (row < src.rows - 1 && pAtSrcAfter[col])
