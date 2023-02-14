@@ -19,6 +19,9 @@ int drawBoard(const Mat &src, Mat &dst);
 int drawRectangle(Mat &src, int topLeftR, int topLeftC, int bottomRightR,
                   int bottomRightC, int color);
 
+int checkNeighborhood(int row, int col, const Mat &src);
+int nextGeneration(Mat &src);
+
 int main(int argc, char *argv[]) {
   init();
   return 0;
@@ -27,8 +30,13 @@ int main(int argc, char *argv[]) {
 int init(void) {
   Mat board, game;
   readFromCSV("tableroInicial.csv", game);
-  drawBoard(game, board);
-  imshow("Tablero", board);
+  for (int i = 0; i < 11; i++) {
+    drawBoard(game, board);
+    imshow("Tablero", board);
+    nextGeneration(game);
+    board.release();
+    waitKey(1000);
+  }
 
   // ------------------------------------------------
   Mat input = imread("./cvImages/mapa.jpg", IMREAD_COLOR);
@@ -141,8 +149,8 @@ int readFromCSV(const string filename, Mat &dst) {
       data[i][j] = token.at(0) - 48;
     }
   }
-
   file.close();
+
   dst = Mat::zeros(50, 100, CV_8UC1);
   for (int r = 0; r < dst.rows; r++) {
     uchar *pAtDst = dst.ptr<uchar>(r);
@@ -200,5 +208,62 @@ int drawRectangle(Mat &src, int topLeftR, int topLeftC, int bottomRightR,
   rectangle(src, Point(topLeftC, topLeftR), Point(bottomRightC, bottomRightR),
             color, -1, LINE_8);
 
+  return 0;
+}
+
+int checkNeighborhood(int row, int col, const Mat &src) {
+  int counter = 0;
+  uchar *pAtSrcBefore, *pAtSrcActual, *pAtSrcAfter;
+
+  if (row > 0)
+    pAtSrcBefore = (uchar *)src.ptr<uchar>(row - 1);
+  if (row < src.rows)
+    pAtSrcAfter = (uchar *)src.ptr<uchar>(row + 1);
+  pAtSrcActual = (uchar *)src.ptr<uchar>(row);
+
+  // Check corners
+  if (row > 0 && col > 0 && pAtSrcBefore[col - 1])
+    counter++;
+  if (row > 0 && col < src.cols - 1 && pAtSrcBefore[col + 1])
+    counter++;
+  if (row < src.rows - 1 && col > 0 && pAtSrcAfter[col - 1])
+    counter++;
+  if (row < src.rows - 1 && col < src.cols - 1 && pAtSrcAfter[col + 1])
+    counter++;
+
+  // Check edge
+  if (row > 0 && pAtSrcBefore[col])
+    counter++;
+  if (row < src.rows - 1 && pAtSrcAfter[col])
+    counter++;
+  if (col > 0 && pAtSrcActual[col - 1])
+    counter++;
+  if (col < src.cols - 1 && pAtSrcActual[col + 1])
+    counter++;
+
+  // pAtSrcActual[col] = 0;
+  // cout << "Numer of ocurrences at (" << row << "," << col << "): " << counter
+  //      << endl;
+  return counter;
+}
+
+int nextGeneration(Mat &src) {
+  int counter = 0;
+  Mat dst = src.clone();
+  for (int r = 0; r < src.rows; r++) {
+    uchar *pAtSrc = src.ptr<uchar>(r);
+    uchar *pAtDst = dst.ptr<uchar>(r);
+    for (int c = 0; c < src.cols; c++) {
+      counter = checkNeighborhood(r, c, src);
+      // Rules
+      if (counter == 3 || (counter == 2 && pAtSrc[c]))
+        pAtDst[c] = 1;
+      if (counter > 3)
+        pAtDst[c] = 0;
+      if (counter <= 1)
+        pAtDst[c] = 0;
+    }
+  }
+  src = dst.clone();
   return 0;
 }
