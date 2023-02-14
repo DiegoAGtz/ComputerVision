@@ -5,6 +5,9 @@
 #include <opencv2/imgproc.hpp>
 #include <string>
 
+#define MAX_ROWS 50
+#define MAX_COLS 100
+
 using namespace std;
 using namespace cv;
 
@@ -28,23 +31,31 @@ int main(int argc, char *argv[]) {
 }
 
 int init(void) {
+  cout << "Juego de la vida de Conway." << endl;
+  cout << "Este programa utiliza opencv para calcular y dibujar las "
+          "generaciones del automata celular."
+       << endl
+       << endl;
   string boardname;
-  cout << "Ingrese el mapa inicial, debe ser un archivo CSV de 50 renglones "
-          "por 100 columnas: ";
+  cout << "Ingrese el mapa inicial, debe ser un archivo CSV de " << MAX_ROWS
+       << " renglones "
+          " por "
+       << MAX_COLS << " columnas: ";
   cin >> boardname;
 
   int countGeneration = 0;
   Mat board, game;
-  readFromCSV(boardname, game);
+  if (readFromCSV(boardname, game))
+    return -1;
 
   while (true) {
     drawBoard(game, board);
     imshow("Board", board);
     nextGeneration(game);
     board.release();
-    countGeneration++;
     cout << "Generacion #" << countGeneration
          << ". Presiona cualquier tecla para detener el juego" << endl;
+    countGeneration++;
     if (waitKey(250) >= 0)
       break;
   }
@@ -150,24 +161,25 @@ int rotate(const Mat &src, Mat &dst, Point2f center, double angle,
 
 // Conway's game functions
 int readFromCSV(const string filename, Mat &dst) {
-  unsigned char data[50][100];
+  unsigned char data[MAX_ROWS][MAX_COLS];
   string line, token;
   fstream file(filename, ios::in);
   if (!file.is_open()) {
     cout << "Could not open the file." << endl;
+    cout << "Wrong or non existent filename" << endl;
     return -1;
   }
-  for (int i = 0; i < 50; i++) {
+  for (int i = 0; i < MAX_ROWS; i++) {
     getline(file, line);
     stringstream ss(line);
-    for (int j = 0; j < 100; j++) {
+    for (int j = 0; j < MAX_COLS; j++) {
       getline(ss, token, ',');
       data[i][j] = token.at(0) - 48;
     }
   }
   file.close();
 
-  dst = Mat::zeros(50, 100, CV_8UC1);
+  dst = Mat::zeros(MAX_ROWS, MAX_COLS, CV_8UC1);
   for (int r = 0; r < dst.rows; r++) {
     uchar *pAtDst = dst.ptr<uchar>(r);
     for (int c = 0; c < dst.cols; c++)
