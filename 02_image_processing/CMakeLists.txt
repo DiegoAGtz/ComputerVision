@@ -1,6 +1,0 @@
-cmake_minimum_required(VERSION 3.0)
-project( ImageProcessing )
-find_package( OpenCV REQUIRED )
-include_directories( "C:\\opencv\\build\\install\\include\\opencv2" )
-add_executable( ImageProcessing main.cpp )
-target_link_libraries( ImageProcessing ${OpenCV_LIBS} )

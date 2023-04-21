@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="imageProcessing" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/imageProcessing" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+					<Add directory="C:/opencv/build/install/include" />
+					<Add directory="C:/opencv/build/install/include/opencv2" />
+				</Compiler>
+				<Linker>
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_aruco470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_barcode470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_bgsegm470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_bioinspired470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_calib3d470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_ccalib470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_core470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_datasets470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_dnn_objdetect470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_dnn_superres470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_dnn470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_dpm470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_face470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_features2d470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_flann470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_fuzzy470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_gapi470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_hfs470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_highgui470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_img_hash470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_imgcodecs470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_imgproc470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_intensity_transform470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_line_descriptor470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_mcc470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_ml470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_objdetect470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_optflow470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_phase_unwrapping470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_photo470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_plot470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_quality470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_rapid470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_reg470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_rgbd470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_saliency470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_shape470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_stereo470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_stitching470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_structured_light470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_superres470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_surface_matching470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_text470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_tracking470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_video470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_videoio470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_videostab470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_wechat_qrcode470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_xfeatures2d470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_ximgproc470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_xobjdetect470.dll.a" />
+					<Add library="C:/opencv/build/install/x64/mingw/lib/libopencv_xphoto470.dll.a" />
+					<Add directory="C:/opencv/build/install/x64/mingw/lib" />
+				</Linker>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/imageProcessing" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+		</Compiler>
+		<Unit filename="main.cpp">
+			<Option target="Debug" />
+		</Unit>
+		<Extensions />
+	</Project>
+</CodeBlocks_project_file>
