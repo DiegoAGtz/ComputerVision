@@ -1,4 +1,4 @@
-# Install script for directory: /home/ag/UG/VisionPorComputadora/code/03_Paper
+# Install script for directory: /mnt/c/Users/diego/UG/VisionPorComputadora/code/03_Paper
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -50,5 +50,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/ag/UG/VisionPorComputadora/code/03_Paper/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/mnt/c/Users/diego/UG/VisionPorComputadora/code/03_Paper/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

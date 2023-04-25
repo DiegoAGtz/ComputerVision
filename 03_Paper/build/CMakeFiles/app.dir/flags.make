@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/c++
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/home/ag/UG/VisionPorComputadora/code/03_Paper/C:/opencv/build/install/include/opencv2 -isystem /usr/local/include/opencv4
+CXX_INCLUDES = -I/mnt/c/Users/diego/UG/VisionPorComputadora/code/03_Paper/C:/opencv/build/install/include/opencv2 -isystem /usr/local/include/opencv4
 
 CXX_FLAGS = 
 

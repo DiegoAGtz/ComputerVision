@@ -1,264 +1,226 @@
-#include <iostream>
+#include <cmath>
 #include <core.hpp>
+#include <core/hal/interface.h>
 #include <highgui.hpp>
 #include <imgproc.hpp>
+#include <iostream>
 #include <opencv.hpp>
-#include <cmath>
+#include <string>
 
 using namespace cv;
 using namespace std;
 
-int cumulative_histo(const Mat &src, Mat &cdf, Mat &thresholded, int &fq, int &med, int &tq);
+int get_cdf(const Mat &src, Mat &cdf);
+int get_segments(const Mat &src, const Mat &cdf, vector<Mat> &segments);
+int transfer_color(const Mat &src, const Mat &src_segments, const Mat &target,
+                   const Mat &target_segments, Mat &output);
+float get_mean(const Mat &src);
+float get_stdev(const Mat &src, float mean);
+int apply_new_color(const vector<Mat> &src_channels,
+                    const vector<Mat> &src_segments,
+                    const vector<Mat> &target_channels,
+                    const vector<Mat> &target_segments, Mat &output);
 
-const string img_source = "./images/source5.jpg";
-const string img_target = "./images/target3.jpg";
+const string img_source = "./images/source2.jpg";
+const string img_target = "./images/target.jpg";
 
-int main(void)
-{
-    // Input and target images reading
-    Mat input = imread(img_source, IMREAD_COLOR);
-    Mat target = imread(img_target, IMREAD_COLOR);
-    if (!input.data or !input.data)
-    {
-        cout << "Wrong or non existent input or target filename" << endl;
-        return -1;
-    }
-    imshow("Input image", input);
-    imshow("Target image", target);
+int main(void) {
+  // Input and target images reading
+  Mat input = imread(img_source, IMREAD_COLOR);
+  Mat target = imread(img_target, IMREAD_COLOR);
+  if (!input.data or !input.data) {
+    cout << "Wrong or non existent input or target filename" << endl;
+    return -1;
+  }
+  imshow("Input image", input);
+  imshow("Target image", target);
 
-    // From BGR to CIELAB
-    Mat input_cielab;
-    Mat target_cielab;
-    cvtColor(input, input_cielab, COLOR_BGR2Lab);
-    cvtColor(target, target_cielab, COLOR_BGR2Lab);
+  // From BGR to CIELAB
+  Mat input_cielab;
+  Mat target_cielab;
+  cvtColor(input, input_cielab, COLOR_BGR2Lab);
+  cvtColor(target, target_cielab, COLOR_BGR2Lab);
 
-    // Split channels
-    vector<Mat> input_channels;
-    vector<Mat> target_channels;
-    split(input_cielab, input_channels);
-    split(target_cielab, target_channels);
+  // Split channels
+  vector<Mat> input_channels;
+  vector<Mat> target_channels;
+  split(input_cielab, input_channels);
+  split(target_cielab, target_channels);
 
-    // Multilevel thresholding channel A
-    int fq, med, tq;
-    Mat histo_channel_a_input, thresholded_a_input, thresholded_a_input_channels;
-    cumulative_histo(input_channels[1], histo_channel_a_input, thresholded_a_input, fq, med, tq);
-//    imshow("Multilevel Thresholding - Channel A - Input", thresholded_a_input);
+  Mat input_cdf_a, input_cdf_b;
+  Mat target_cdf_a, target_cdf_b;
+  vector<Mat> input_segments_a, input_segments_b;
+  vector<Mat> target_segments_a, target_segments_b;
+  get_cdf(input_channels[1], input_cdf_a);
+  get_cdf(input_channels[2], input_cdf_b);
+  get_cdf(target_channels[1], target_cdf_a);
+  get_cdf(target_channels[2], target_cdf_b);
+  get_segments(input_channels[1], input_cdf_a, input_segments_a);
+  get_segments(input_channels[2], input_cdf_b, input_segments_b);
+  get_segments(target_channels[1], target_cdf_a, target_segments_a);
+  get_segments(target_channels[2], target_cdf_b, target_segments_b);
 
-    Mat histo_channel_a_target, thresholded_a_target, thresholded_a_target_channels;
-    cumulative_histo(target_channels[1], histo_channel_a_target, thresholded_a_target, fq, med, tq);
-//    imshow("Multilevel Thresholding - Channel A - Target", thresholded_a_target);
+  Mat ct_channel_a, ct_channel_b;
+  apply_new_color(input_channels, input_segments_a, target_channels,
+                  target_segments_a, ct_channel_a);
+  apply_new_color(input_channels, input_segments_b, target_channels,
+                  target_segments_b, ct_channel_b);
 
-    // Multilevel thresholding channel B
-    Mat histo_channel_b_input, thresholded_b_input, thresholded_b_input_channels;
-    cumulative_histo(input_channels[2], histo_channel_b_input, thresholded_b_input, fq, med, tq);
-//    imshow("Multilevel Thresholding - Channel B - Input", thresholded_b_input);
+  Mat bgr_channel_a, bgr_channel_b;
+  cvtColor(ct_channel_a, bgr_channel_a, COLOR_Lab2BGR);
+  cvtColor(ct_channel_b, bgr_channel_b, COLOR_Lab2BGR);
 
-    Mat histo_channel_b_target, thresholded_b_target, thresholded_b_target_channels;
-    cumulative_histo(target_channels[2], histo_channel_b_target, thresholded_b_target, fq, med, tq);
-//    imshow("Multilevel Thresholding - Channel B - Target", thresholded_b_target);
+  imshow("Color transfer channel A", bgr_channel_a);
+  imshow("Color transfer channel B", bgr_channel_b);
 
-    // Multilevel Color Transfer channel A
-    Mat mean_input, std_dev_input;
-    Mat mean_target, std_dev_target;
-    Mat output = Mat::zeros(input.size(), CV_8UC3);
-    vector<Mat> thresholded_a_input_channels_s;
-    vector<Mat> thresholded_a_target_channels_s;
-    split(thresholded_a_input, thresholded_a_input_channels_s);
-    split(thresholded_a_target, thresholded_a_target_channels_s);
-
-    // Four levels of Threshold
-//    Mat color_transfer = Mat::zeros(input.size(), CV_8UC1);
-    for (int i=0; i < 4; i++)
-    {
-        for (int j = 0; j < 3; j++)
-        {
-            Mat tmpInput = Mat::zeros(input.size(), CV_8UC1);
-            Mat tmpTarget = Mat::zeros(target.size(), CV_8UC1);
-            float meanInput = 0;
-            float meanTarget = 0;
-            float stdevInput = 0;
-            float stdevTarget = 0;
-            for (int r = 0; r < input.rows; r++)
-            {
-                uchar *pThresh = (uchar *)thresholded_a_input_channels_s[i].ptr<uchar>(r);
-                uchar *pDst = (uchar *)tmpInput.ptr<uchar>(r);
-                Vec3b *pIn = input_cielab.ptr<Vec3b>(r);
-                for (int c = 0; c < input.cols; c++)
-                {
-                    if (pThresh[c])
-                    {
-                        pDst[c] = pIn[c][j];
-                        meanInput += pIn[c][j];
-                    }
-                }
-            }
-            for (int r = 0; r < target.rows; r++)
-            {
-                uchar *pThresh = (uchar *)thresholded_a_target_channels_s[i].ptr<uchar>(r);
-                uchar *pDst = (uchar *)tmpTarget.ptr<uchar>(r);
-                Vec3b *pIn = target_cielab.ptr<Vec3b>(r);
-                for (int c = 0; c < target.cols; c++)
-                {
-                    if (pThresh[c])
-                    {
-                        pDst[c] = pIn[c][j];
-                        meanTarget += pIn[c][j];
-                    }
-                }
-            }
-            meanInput = (1 / input_cielab.rows * input_cielab.cols) * meanInput;
-            meanTarget = (1 / target_cielab.rows * target_cielab.cols) * meanTarget;
-
-            for (int r = 0; r < input.rows; r++)
-            {
-                uchar *pThresh = (uchar *)thresholded_a_input_channels_s[i].ptr<uchar>(r);
-                Vec3b *pIn = input_cielab.ptr<Vec3b>(r);
-                for (int c = 0; c < input.cols; c++)
-                {
-                    if (pThresh[c])
-                    {
-                        float tmp = pIn[c][j] - meanInput;
-                        stdevInput += (tmp * tmp);
-                    }
-                }
-            }
-            for (int r = 0; r < target.rows; r++)
-            {
-                uchar *pThresh = (uchar *)thresholded_a_target_channels_s[i].ptr<uchar>(r);
-                Vec3b *pIn = target_cielab.ptr<Vec3b>(r);
-                for (int c = 0; c < target.cols; c++)
-                {
-                    if (pThresh[c])
-                    {
-                        float tmp = pIn[c][j];
-                        stdevTarget += (tmp * tmp);
-                    }
-                }
-            }
-
-            stdevInput = sqrt(stdevInput);
-            stdevTarget = sqrt(stdevTarget);
-
-            imshow("tmpIn", tmpInput);
-            imshow("tmpTarg", tmpTarget);
-            waitKey(0);
-
-            meanStdDev(tmpInput, mean_input, std_dev_input);
-            meanStdDev(tmpTarget, mean_target, std_dev_target);
-            for (int r = 0; r < output.rows; r++)
-            {
-                Vec3b *pDst = output.ptr<Vec3b>(r);
-                Vec3b *pChannels = input_cielab.ptr<Vec3b>(r);
-                uchar *pThresh = (uchar *)thresholded_a_input_channels_s[i].ptr<uchar>(r);
-                for (int c = 0; c < output.cols; c++)
-                {
-//                    if (pThresh[c] == 1)
-//                    {
-                        float tmp = ((stdevTarget/stdevInput)*(pChannels[c][j] - meanInput) + meanTarget);
-                        pDst[c][j] = (uchar)tmp;
-//                    }
-                }
-            }
-            Mat tmp_out;
-            cvtColor(output, tmp_out, COLOR_Lab2BGR);
-            imshow("tmpOut", tmp_out);
-            waitKey(0);
-        }
-    }
-    Mat output_bgr;
-    cvtColor(output, output_bgr, COLOR_Lab2BGR);
-    imshow("Output image - Thresholded Channel A", output_bgr);
-
-    // Multilevel Color Transfer channel A
-
-
-    // Merging channels
-//    Mat thresholded_channels_input_a[3] = {input_channels[0], color_transfer, input_channels[2]};
-//    Mat thresholded_channels_input_b[3] = {input_channels[0], input_channels[1], thresholded_b_input};
-//    Mat thresholded_channels_target_a[3] = {target_channels[0], thresholded_a_target, target_channels[2]};
-//    Mat thresholded_channels_target_b[3] = {target_channels[0], target_channels[1], thresholded_b_target};
-
-    Mat thresholded_merged_input_a, thresholded_merged_input_b;
-    Mat thresholded_merged_target_a, thresholded_merged_target_b;
-//    merge(thresholded_channels_input_a, 3, thresholded_merged_input_a);
-//    merge(thresholded_channels_input_b, 3, thresholded_merged_input_b);
-//    merge(thresholded_channels_target_a, 3, thresholded_merged_target_a);
-//    merge(thresholded_channels_target_b, 3, thresholded_merged_target_b);
-
-    // From CIELAB to BGR
-    Mat input_bgr_a, input_bgr_b;
-    Mat target_bgr_a, target_bgr_b;
-//    cvtColor(thresholded_merged_input_a, input_bgr_a, COLOR_Lab2BGR);
-//    cvtColor(thresholded_merged_input_b, input_bgr_b, COLOR_Lab2BGR);
-//    cvtColor(thresholded_merged_target_a, target_bgr_a, COLOR_Lab2BGR);
-//    cvtColor(thresholded_merged_target_b, target_bgr_b, COLOR_Lab2BGR);
-
-//    imshow("Input image - Thresholded Channel A", input_bgr_a);
-//    imshow("Input image - Thresholded Channel B", input_bgr_b);
-//    imshow("Target image - Thresholded Channel A", target_bgr_a);
-//    imshow("Target image - Thresholded Channel B", target_bgr_b);
-
-    // Histogram comparison channel A
-
-
-    // Histogram comparison channel B
-
-
-    // Edge detection
-
-
-    // Canvas creation
-
-
-    // Image fusion
-
-
-    // Filtering Mean - Median
-
-
-    // Show output image
-
-    waitKey(0);
-    return 0;
+  waitKey(0);
+  return 0;
 }
 
-int cumulative_histo(const Mat &src, Mat &cdf, Mat &thresholded, int &fq, int &med, int &tq)
-{
-    int histSize = 256; // number of bins in the histogram
-    float range[] = {1, 257}; // range of pixel values
-    const float* histRange = {range};
+int get_cdf(const Mat &src, Mat &cdf) {
+  int histSize = 256;       // number of bins in the histogram
+  float range[] = {1, 257}; // range of pixel values
+  const float *histRange = {range};
 
-    // calculate the histogram
-    Mat hist;
-    calcHist(&src, 1, 0, Mat(), hist, 1, &histSize, &histRange, true, false);
+  // calculate the histogram
+  Mat hist;
+  calcHist(&src, 1, 0, Mat(), hist, 1, &histSize, &histRange, true, false);
 
-    // calculate the cumulative distribution function (CDF)
-    hist.copyTo(cdf);
-    for (int i = 1; i < histSize; i++) cdf.at<float>(i) += cdf.at<float>(i-1);
+  // calculate the cumulative distribution function (CDF)
+  hist.copyTo(cdf);
+  for (int i = 1; i < histSize; i++)
+    cdf.at<float>(i) += cdf.at<float>(i - 1);
 
-    // normalize the CDF
-    normalize(cdf, cdf, 0, 1, NORM_MINMAX);
+  normalize(cdf, cdf, 0, 1, NORM_MINMAX);
+  return 0;
+}
 
-    for (int i = 1; i < histSize; i++)
-    {
-        if (cdf.at<float>(i) < 0.25) fq = i;
-        if (cdf.at<float>(i) < 0.50 || med == fq) med = i;
-        if (cdf.at<float>(i) < 0.75 || tq == med) tq = i;
+int get_segments(const Mat &src, const Mat &cdf, vector<Mat> &segments) {
+  int fq, med, tq;
+  int segm[5] = {1, 0, 0, 0, 256};
+  for (int i = 1; i < 256; i++) {
+    float value_tmp = cdf.at<float>(i);
+    if (value_tmp <= 0.25)
+      segm[1] = i;
+    if (value_tmp == segm[1] || value_tmp <= 0.50)
+      segm[2] = i;
+    if (value_tmp == segm[2] || value_tmp <= 0.75)
+      segm[3] = i;
+  }
+
+  for (int i = 1; i < 5; i++) {
+    Mat tmp = Mat::zeros(src.size(), CV_8UC1);
+    for (int r = 0; r < src.rows; r++) {
+      uchar *p_dst = (uchar *)tmp.ptr<uchar>(r);
+      uchar *p_src = (uchar *)src.ptr<uchar>(r);
+      for (int c = 0; c < src.cols; c++) {
+        if (p_src[c] >= segm[i - 1] && p_src[c] < segm[i])
+          p_dst[c] = 1;
+      }
     }
+    segments.push_back(tmp);
+  }
+  return 0;
+}
 
-    // apply the thresholds to the image
-    thresholded = Mat::zeros(src.size(), CV_8UC4);
-    for (int r = 0; r < thresholded.rows; r++)
-    {
-        Vec4b *pDst = thresholded.ptr<Vec4b>(r);
-        uchar *pMsk = (uchar *)src.ptr<uchar>(r);
-        for (int c = 0; c < thresholded.cols; c++)
-        {
-            if (pMsk[c] < fq) pDst[c][0] = 1;
-            else if (pMsk[c] < med && pMsk[c] > fq) pDst[c][1] = 1;
-            else if (pMsk[c] < tq && pMsk[c] > med) pDst[c][2] = 1;
-            else pDst[c][3] = 1;
-        }
+int transfer_color(const Mat &src, const Mat &src_segment, const Mat &target,
+                   const Mat &target_segment, Mat &output) {
+  Mat src_tmp = Mat::zeros(src.size(), CV_8UC1);
+  Mat target_tmp = Mat::zeros(src.size(), CV_8UC1);
+  for (int r = 0; r < src.rows; r++) {
+    uchar *p_msk = (uchar *)src_segment.ptr<uchar>(r);
+    uchar *p_src = (uchar *)src.ptr<uchar>(r);
+    uchar *p_dst = (uchar *)src_tmp.ptr<uchar>(r);
+    for (int c = 0; c < src.cols; c++) {
+      if (p_msk[c]) {
+        p_dst[c] = p_src[c];
+      }
     }
-    return 0;
+  }
+  for (int r = 0; r < src.rows; r++) {
+    uchar *p_msk = (uchar *)target_segment.ptr<uchar>(r);
+    uchar *p_src = (uchar *)target.ptr<uchar>(r);
+    uchar *p_dst = (uchar *)target_tmp.ptr<uchar>(r);
+    for (int c = 0; c < src.cols; c++) {
+      if (p_msk[c]) {
+        p_dst[c] = p_src[c];
+      }
+    }
+  }
+  imshow("Imagen yo:", src_tmp);
+  waitKey(0);
+
+  src_tmp.copyTo(output);
+
+  float src_mean = get_mean(src_tmp);
+  float src_stdev = get_stdev(src_tmp, src_mean);
+  float target_mean = get_mean(target_tmp);
+  float target_stdev = get_stdev(target_tmp, target_mean);
+  for (int r = 0; r < src.rows; r++) {
+    uchar *p_src = (uchar *)src_tmp.ptr<uchar>(r);
+    uchar *p_dst = (uchar *)output.ptr<uchar>(r);
+    for (int c = 0; c < src.cols; c++) {
+      p_dst[c] = (target_stdev / src_stdev);
+      p_dst[c] *= p_src[c] - src_mean;
+      p_dst[c] += target_mean;
+    }
+  }
+  return 0;
+}
+
+float get_mean(const Mat &src) {
+  float mean = 0.0;
+  for (int r = 0; r < src.rows; r++) {
+    uchar *p_src = (uchar *)src.ptr<uchar>(r);
+    for (int c = 0; c < src.cols; c++) {
+      mean += p_src[c];
+    }
+  }
+  return mean * (1.0 / (src.rows * src.cols));
+}
+
+float get_stdev(const Mat &src, float mean) {
+  float stdev = 0.0;
+  for (int r = 0; r < src.rows; r++) {
+    uchar *p_src = (uchar *)src.ptr<uchar>(r);
+    for (int c = 0; c < src.cols; c++) {
+      stdev += (p_src[c] - mean) * (p_src[c] - mean);
+    }
+  }
+  stdev *= 1.0 / (src.rows * src.cols);
+  return sqrt(stdev);
+}
+
+int apply_new_color(const vector<Mat> &src_channels,
+                    const vector<Mat> &src_segments,
+                    const vector<Mat> &target_channels,
+                    const vector<Mat> &target_segments, Mat &output) {
+  vector<vector<Mat>> tmp_out;
+  for (int i = 0; i < 4; i++) {
+    vector<Mat> tmp_segments;
+    for (int j = 0; j < 3; j++) {
+      Mat tmp = Mat::zeros(src_channels[0].size(), CV_8UC1);
+      transfer_color(src_channels[j], src_segments[i], target_channels[j],
+                     target_segments[i], tmp);
+      tmp_segments.push_back(tmp);
+    }
+    tmp_out.push_back(tmp_segments);
+  }
+
+  vector<Mat> segments_lab;
+  for (int i = 0; i < 4; i++) {
+    Mat tmp_array[3] = {tmp_out[i][0], tmp_out[i][1], tmp_out[i][2]};
+    Mat tmp = Mat::zeros(src_channels[0].size(), CV_8UC3);
+    merge(tmp_array, 3, tmp);
+    segments_lab.push_back(tmp);
+  }
+
+  for (int i = 0; i < 4; i++) {
+    Mat tmp;
+    bitwise_or(segments_lab[0], segments_lab[1], output);
+    bitwise_or(output, segments_lab[2], output);
+    bitwise_or(output, segments_lab[3], output);
+  }
+
+  return 0;
 }
