@@ -11,11 +11,12 @@ using namespace cv;
 using namespace std;
 
 int get_cdf(const Mat &src, Mat &cdf);
+int show_histo(Mat &hist, int histSize);
 int get_segments(const Mat &src, const Mat &cdf, vector<Mat> &segments);
 int transfer_color(const Mat &src, const Mat &src_segments, const Mat &target,
                    const Mat &target_segments, Mat &output);
-float get_mean(const Mat &src);
-float get_stdev(const Mat &src, float mean);
+float get_mean(const Mat &src, const Mat &msk);
+float get_stdev(const Mat &src, const Mat &msk, float mean);
 int apply_new_color(const vector<Mat> &src_channels,
                     const vector<Mat> &src_segments,
                     const vector<Mat> &target_channels,
@@ -32,6 +33,7 @@ int main(void) {
     cout << "Wrong or non existent input or target filename" << endl;
     return -1;
   }
+  medianBlur(input, input, 3);
   imshow("Input image", input);
   imshow("Target image", target);
 
@@ -59,6 +61,12 @@ int main(void) {
   get_segments(input_channels[2], input_cdf_b, input_segments_b);
   get_segments(target_channels[1], target_cdf_a, target_segments_a);
   get_segments(target_channels[2], target_cdf_b, target_segments_b);
+
+  // for (int i = 0; i < 4; i++) {
+  //   imshow("Segment A - " + to_string(i), input_segments_a[i]);
+  //   imshow("Segment B - " + to_string(i), input_segments_b[i]);
+  // }
+  // waitKey(0);
 
   Mat ct_channel_a, ct_channel_b;
   apply_new_color(input_channels, input_segments_a, target_channels,
@@ -95,8 +103,31 @@ int get_cdf(const Mat &src, Mat &cdf) {
   return 0;
 }
 
+int show_histo(Mat &hist, int histSize) {
+  // crear la trama del histograma
+  int width = 512, height = 400;
+  Mat histPlot(height, width, CV_8UC3, Scalar(0, 0, 0));
+
+  // encontrar el valor máximo del histograma para la normalización
+  double maxVal = 0;
+  minMaxLoc(hist, 0, &maxVal);
+
+  // dibujar el histograma
+  int binWidth = cvRound((double)width / histSize);
+  for (int i = 0; i < histSize; i++) {
+    float binVal = hist.at<float>(i);
+    int intensity = cvRound(binVal * height / maxVal);
+    rectangle(histPlot, Point(i * binWidth, height),
+              Point((i + 1) * binWidth, height - intensity),
+              Scalar(255, 255, 255), -1);
+  }
+
+  // mostrar la imagen y el histograma
+  imshow("Histogram", histPlot);
+  return 0;
+}
+
 int get_segments(const Mat &src, const Mat &cdf, vector<Mat> &segments) {
-  int fq, med, tq;
   int segm[5] = {1, 0, 0, 0, 256};
   for (int i = 1; i < 256; i++) {
     float value_tmp = cdf.at<float>(i);
@@ -115,7 +146,7 @@ int get_segments(const Mat &src, const Mat &cdf, vector<Mat> &segments) {
       uchar *p_src = (uchar *)src.ptr<uchar>(r);
       for (int c = 0; c < src.cols; c++) {
         if (p_src[c] >= segm[i - 1] && p_src[c] < segm[i])
-          p_dst[c] = 1;
+          p_dst[c] = 255;
       }
     }
     segments.push_back(tmp);
@@ -126,7 +157,7 @@ int get_segments(const Mat &src, const Mat &cdf, vector<Mat> &segments) {
 int transfer_color(const Mat &src, const Mat &src_segment, const Mat &target,
                    const Mat &target_segment, Mat &output) {
   Mat src_tmp = Mat::zeros(src.size(), CV_8UC1);
-  Mat target_tmp = Mat::zeros(src.size(), CV_8UC1);
+  Mat target_tmp = Mat::zeros(target.size(), CV_8UC1);
   for (int r = 0; r < src.rows; r++) {
     uchar *p_msk = (uchar *)src_segment.ptr<uchar>(r);
     uchar *p_src = (uchar *)src.ptr<uchar>(r);
@@ -137,57 +168,73 @@ int transfer_color(const Mat &src, const Mat &src_segment, const Mat &target,
       }
     }
   }
-  for (int r = 0; r < src.rows; r++) {
+  for (int r = 0; r < target.rows; r++) {
     uchar *p_msk = (uchar *)target_segment.ptr<uchar>(r);
     uchar *p_src = (uchar *)target.ptr<uchar>(r);
     uchar *p_dst = (uchar *)target_tmp.ptr<uchar>(r);
-    for (int c = 0; c < src.cols; c++) {
+    for (int c = 0; c < target.cols; c++) {
       if (p_msk[c]) {
         p_dst[c] = p_src[c];
       }
     }
   }
-  imshow("Imagen yo:", src_tmp);
-  waitKey(0);
 
   src_tmp.copyTo(output);
 
-  float src_mean = get_mean(src_tmp);
-  float src_stdev = get_stdev(src_tmp, src_mean);
-  float target_mean = get_mean(target_tmp);
-  float target_stdev = get_stdev(target_tmp, target_mean);
+  float src_mean = get_mean(src_tmp, src_segment);
+  float src_stdev = get_stdev(src_tmp, src_segment, src_mean);
+  float target_mean = get_mean(target_tmp, target_segment);
+  float target_stdev = get_stdev(target_tmp, target_segment, target_mean);
   for (int r = 0; r < src.rows; r++) {
-    uchar *p_src = (uchar *)src_tmp.ptr<uchar>(r);
+    uchar *p_msk = (uchar *)src_segment.ptr<uchar>(r);
+    uchar *p_src = (uchar *)src.ptr<uchar>(r);
     uchar *p_dst = (uchar *)output.ptr<uchar>(r);
     for (int c = 0; c < src.cols; c++) {
-      p_dst[c] = (target_stdev / src_stdev);
-      p_dst[c] *= p_src[c] - src_mean;
-      p_dst[c] += target_mean;
+      if (p_msk[c])
+        p_dst[c] =
+            (target_stdev / src_stdev) * (p_src[c] - src_mean) + target_mean;
     }
   }
+
+  // imshow("Tmp-Src", src_tmp);
+  // imshow("Tmp-Target", target_tmp);
+  // imshow("out", output);
+  // waitKey(0);
   return 0;
 }
 
-float get_mean(const Mat &src) {
+float get_mean(const Mat &src, const Mat &msk) {
+  int count = 0;
   float mean = 0.0;
   for (int r = 0; r < src.rows; r++) {
+    uchar *p_msk = (uchar *)msk.ptr<uchar>(r);
     uchar *p_src = (uchar *)src.ptr<uchar>(r);
     for (int c = 0; c < src.cols; c++) {
-      mean += p_src[c];
+      if (p_msk[c]) {
+        mean += p_src[c];
+        count++;
+      }
     }
   }
   return mean * (1.0 / (src.rows * src.cols));
+  // return mean * (1.0 / count);
 }
 
-float get_stdev(const Mat &src, float mean) {
+float get_stdev(const Mat &src, const Mat &msk, float mean) {
   float stdev = 0.0;
+  int count = 0;
   for (int r = 0; r < src.rows; r++) {
+    uchar *p_msk = (uchar *)msk.ptr<uchar>(r);
     uchar *p_src = (uchar *)src.ptr<uchar>(r);
     for (int c = 0; c < src.cols; c++) {
-      stdev += (p_src[c] - mean) * (p_src[c] - mean);
+      if (p_msk[c]) {
+        stdev += ((p_src[c] - mean) * (p_src[c] - mean));
+        count++;
+      }
     }
   }
-  stdev *= 1.0 / (src.rows * src.cols);
+  stdev *= (1.0 / (src.rows * src.cols));
+  // stdev *= (1.0 / count);
   return sqrt(stdev);
 }
 
