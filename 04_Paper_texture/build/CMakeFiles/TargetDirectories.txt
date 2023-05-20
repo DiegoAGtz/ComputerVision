@@ -1,0 +1,3 @@
+/home/ag/UG/VisionPorComputadora/code/04_Paper_texture/build/CMakeFiles/app.dir
+/home/ag/UG/VisionPorComputadora/code/04_Paper_texture/build/CMakeFiles/edit_cache.dir
+/home/ag/UG/VisionPorComputadora/code/04_Paper_texture/build/CMakeFiles/rebuild_cache.dir
