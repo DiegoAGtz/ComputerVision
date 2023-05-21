@@ -17,7 +17,7 @@ int getDisplacementVectors(const Mat &src, Mat &hdst, Mat &vdst);
 int writeCSV(string filename, Mat m);
 int getTexelSize(const Mat &dsvect);
 
-const string img_source = "./images/test4.jpg";
+const string img_source = "./images/chess.jpg";
 
 int main(void) {
   Mat input = imread(img_source, IMREAD_GRAYSCALE);
