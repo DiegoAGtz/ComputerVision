@@ -17,7 +17,7 @@ int getDisplacementVectors(const Mat &src, Mat &hdst, Mat &vdst);
 int writeCSV(string filename, Mat m);
 int getTexelSize(const Mat &dsvect);
 
-const string img_source = "./images/IMG_0215.jpg";
+const string img_source = "./images/test4.jpg";
 
 int main(void) {
   Mat input = imread(img_source, IMREAD_GRAYSCALE);
@@ -128,7 +128,7 @@ int getTexelSize(const Mat &dsvect) {
   double max = p[10];
   int ret = 10;
   bool up = false;
-  for (int c = 10; c < dsvect.cols - 1; c++) {
+  for (int c = 10; c < int(dsvect.cols / 2) - 1; c++) {
     if (p[c] > max) {
       max = p[c];
       ret = c;
